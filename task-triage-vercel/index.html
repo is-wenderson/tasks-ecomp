@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Central de Triagem — Tarefas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#10161F;
+    --surface:#1A222D;
+    --surface-alt:#212B38;
+    --border:#2B3648;
+    --border-strong:#38455A;
+    --text-primary:#ECEFF3;
+    --text-muted:#8996A6;
+    --text-faint:#5C6773;
+    --alta:#E15B44;
+    --media:#E3A73B;
+    --baixa:#3FAE8A;
+    --danger:#E4664F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg-deep);
+    color:var(--text-primary);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::placeholder{color:var(--text-faint);}
+  .display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  .wrap{max-width:1120px;margin:0 auto;padding:32px 20px 64px;}
+  @media(min-width:768px){.wrap{padding:32px 32px 64px;}}
+
+  .banner{
+    display:flex;align-items:flex-start;gap:10px;
+    background:rgba(227,167,59,.12);color:#EFC77E;
+    border:1px solid rgba(227,167,59,.35);
+    padding:10px 14px;border-radius:8px;font-size:12.5px;margin-bottom:20px;
+  }
+  .banner code{background:rgba(0,0,0,.25);padding:1px 5px;border-radius:4px;font-family:'JetBrains Mono',monospace;}
+  .banner.ok{background:rgba(63,174,138,.12);color:#8fdcbf;border-color:rgba(63,174,138,.35);}
+
+  header.top{margin-bottom:32px;}
+  .eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:6px;color:var(--text-faint);font-size:12px;letter-spacing:.08em;text-transform:uppercase;}
+  .eyebrow svg{color:var(--alta);}
+  h1{font-size:26px;font-weight:700;margin:0;}
+  @media(min-width:768px){h1{font-size:30px;}}
+  .subline{font-size:14px;color:var(--text-muted);margin:6px 0 0;}
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:32px;}
+  label.field-label{display:block;font-size:14px;font-weight:500;margin-bottom:8px;color:var(--text-primary);}
+  textarea, input[type=text], input[type=date], select{
+    width:100%;
+    background:var(--surface-alt);
+    border:1px solid var(--border);
+    color:var(--text-primary);
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:14px;
+    font-family:inherit;
+    outline:none;
+  }
+  textarea{resize:none;}
+  textarea:focus, input:focus, select:focus{border-color:var(--border-strong);}
+
+  .row-between{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;}
+  .hint{font-size:12px;color:var(--text-faint);}
+
+  button{font-family:inherit;cursor:pointer;border:none;}
+  .btn-primary{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--alta);color:#fff;font-size:14px;font-weight:500;
+    padding:9px 16px;border-radius:8px;transition:opacity .15s;
+  }
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-ghost{
+    display:inline-flex;align-items:center;gap:6px;
+    background:transparent;color:var(--text-primary);font-size:14px;
+    padding:8px 14px;border-radius:8px;border:1px solid var(--border-strong);
+  }
+  .btn-text{background:transparent;color:var(--text-muted);font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);}
+
+  .error-box{
+    display:flex;align-items:flex-start;gap:8px;margin-top:12px;
+    background:rgba(228,102,79,.12);color:#F2A896;font-size:12px;
+    padding:8px 12px;border-radius:8px;
+  }
+
+  .board-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .board-head h2{font-size:14px;font-weight:600;margin:0;}
+
+  .board{display:grid;grid-template-columns:1fr;gap:24px;}
+  @media(min-width:700px){.board{grid-template-columns:1fr 1fr;}}
+  @media(min-width:1100px){.board{grid-template-columns:repeat(4,1fr);}}
+
+  .column-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:0 2px;min-width:0;}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .col-title{font-size:14px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .col-sub{font-size:11px;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .col-count{margin-left:auto;font-size:12px;color:var(--text-muted);}
+
+  .cards{display:flex;flex-direction:column;gap:8px;}
+  .empty-col{font-size:12px;text-align:center;padding:24px 8px;border:1px dashed var(--border);border-radius:8px;color:var(--text-faint);}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;display:flex;transition:transform .15s;}
+  .card:hover{transform:translateY(-2px);}
+  .stripe{width:4px;flex-shrink:0;}
+  .card-body{flex:1;min-width:0;padding:12px;}
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;}
+  .pill{font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:var(--surface-alt);color:var(--text-muted);white-space:nowrap;}
+  .code{font-size:11px;color:var(--text-faint);}
+  .card-title{font-size:14px;font-weight:500;line-height:1.35;margin:0;word-break:break-word;}
+  .card-title.done{color:var(--text-faint);text-decoration:line-through;}
+  .card-desc{font-size:12px;color:var(--text-muted);margin:4px 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .card-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;}
+  .meta-left{display:flex;align-items:center;gap:8px;min-width:0;font-size:12px;color:var(--text-muted);}
+  .meta-left .date-chip{display:flex;align-items:center;gap:4px;}
+  .actions{display:flex;align-items:center;gap:2px;flex-shrink:0;}
+  .icon-btn{background:transparent;color:var(--text-muted);padding:6px;border-radius:6px;display:flex;}
+  .icon-btn:hover{background:var(--surface-alt);}
+  .icon-btn.danger:hover{color:var(--danger);}
+  .icon-btn.complete{color:var(--baixa);}
+  .icon-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  .board-empty{border:1px dashed var(--border);border-radius:10px;padding:48px 20px;text-align:center;color:var(--text-muted);}
+  .board-empty svg{color:var(--text-faint);margin-bottom:10px;}
+  .board-empty p{font-size:14px;margin:0;}
+
+  .modal-backdrop{position:fixed;inset:0;background:rgba(8,11,16,.7);display:none;align-items:center;justify-content:center;padding:16px;z-index:50;}
+  .modal-backdrop.open{display:flex;}
+  .modal{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;padding:20px;}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .modal-head h3{font-size:16px;font-weight:600;margin:0;}
+  .close-btn{background:transparent;color:var(--text-muted);padding:4px;border-radius:6px;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .form-field{margin-bottom:12px;}
+  .form-field label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:4px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
+
+  .spin{animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- ================================================================
+       CONFIGURAÇÃO: cole aqui a URL do seu Web App do Google Apps Script
+       (veja o arquivo Code.gs e o passo a passo de implantação).
+       Se ficar vazio, o app roda em modo local (tarefas manuais ficam salvas neste navegador).
+       ================================================================ -->
+  <div id="config-banner"></div>
+
+  <header class="top">
+    <div class="eyebrow">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Central de triagem</span>
+    </div>
+    <h1 class="display">Suas demandas, organizadas sozinhas</h1>
+    <p class="subline" id="subline">Carregando tarefas...</p>
+  </header>
+
+  <section class="panel">
+    <label class="field-label" for="raw-input">Conte o que você tem para fazer e o que já fez</label>
+    <textarea id="raw-input" rows="3" maxlength="12000" placeholder="Ex: preciso enviar o relatório urgente até amanhã, já terminei a apresentação do cliente, e em algum momento quero organizar meus arquivos"></textarea>
+    <div class="row-between">
+      <p class="hint">A IA identifica prioridade, status e categoria automaticamente.</p>
+      <button class="btn-primary" id="analyze-btn">
+        <svg id="analyze-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+        <span id="analyze-label">Analisar e organizar</span>
+      </button>
+    </div>
+    <div class="error-box" id="error-box" style="display:none;"></div>
+  </section>
+
+  <div class="board-head">
+    <h2>Quadro de tarefas</h2>
+    <button class="btn-ghost" id="new-task-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+      Nova tarefa
+    </button>
+  </div>
+
+  <div id="board-empty" class="board-empty" style="display:none;">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+    <p>Ainda não há tarefas. Escreva no campo acima ou crie uma manualmente.</p>
+  </div>
+
+  <div class="board" id="board"></div>
+</div>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3 id="modal-title" class="display">Nova tarefa</h3>
+      <button class="close-btn" id="modal-close" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <form id="task-form">
+      <div class="form-field">
+        <label for="f-title">Título</label>
+        <input type="text" id="f-title" required maxlength="120" placeholder="Ex: enviar relatório mensal">
+      </div>
+      <div class="form-field">
+        <label for="f-desc">Descrição (opcional)</label>
+        <textarea id="f-desc" rows="2" placeholder="Detalhes adicionais"></textarea>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="f-priority">Prioridade</label>
+          <select id="f-priority">
+            <option value="alta">Alta</option>
+            <option value="media" selected>Média</option>
+            <option value="baixa">Baixa</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="f-due">Prazo (opcional)</label>
+          <input type="date" id="f-due">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="f-category">Categoria (opcional)</label>
+          <input type="text" id="f-category" placeholder="trabalho, pessoal...">
+        </div>
+        <div class="form-field">
+          <label for="f-status">Status</label>
+          <select id="f-status">
+            <option value="pendente" selected>Pendente</option>
+            <option value="concluida">Concluída</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-text" id="modal-cancel">Cancelar</button>
+        <button type="submit" class="btn-primary" style="padding:9px 16px;">Salvar tarefa</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // -------------------------------------------------------------------
+  // BACKEND
+  // No Vercel, /api/backend é uma Function same-origin que encaminha as
+  // requisições ao Google Apps Script. Nenhuma URL/chave privada fica aqui.
+  // Ao abrir este arquivo diretamente (file://), o app entra em modo local.
+  // -------------------------------------------------------------------
+  const API_URL = "/api/backend";
+  const HAS_BACKEND = window.location.protocol !== "file:";
+
+  const LOCAL_TASKS_KEY = "tasktriage.tasks.v2";
+  const DRAFT_KEY = "tasktriage.draft.v2";
+  const ACCESS_SESSION_KEY = "tasktriage.access.v2";
+
+  let tasks = [];
+  let editingTaskId = null;
+  let isProcessing = false;
+  let isBusy = false;
+  let lastSyncAt = 0;
+
+  const PRIORITY = {
+    alta:  { label: "Alta",  color: "#E15B44" },
+    media: { label: "Média", color: "#E3A73B" },
+    baixa: { label: "Baixa", color: "#3FAE8A" },
+  };
+
+  const COLUMN_ORDER = ["alta", "media", "baixa", "concluida"];
+  const COLUMN_META = {
+    alta:      { title: "Alta prioridade",  subtitle: "Trate primeiro",    color: PRIORITY.alta.color,  empty: "Nada urgente por aqui." },
+    media:     { title: "Média prioridade", subtitle: "Planeje a semana",  color: PRIORITY.media.color, empty: "Nenhuma tarefa de médio prazo." },
+    baixa:     { title: "Baixa prioridade", subtitle: "Sem pressa",        color: PRIORITY.baixa.color, empty: "Nenhuma tarefa de baixa prioridade." },
+    concluida: { title: "Concluídas",       subtitle: "Já resolvidas",     color: "#5C6773",            empty: "Ainda nada concluído." },
+  };
+
+  const configBanner = document.getElementById("config-banner");
+  const rawInput = document.getElementById("raw-input");
+  const analyzeBtn = document.getElementById("analyze-btn");
+  const analyzeLabel = document.getElementById("analyze-label");
+  const analyzeIcon = document.getElementById("analyze-icon");
+  const errorBox = document.getElementById("error-box");
+
+  // -------------------------------------------------------------------
+  // Status e mensagens
+  // -------------------------------------------------------------------
+  function renderConfigBanner(type, message){
+    if(!message){
+      configBanner.innerHTML = "";
+      return;
+    }
+    const klass = type === "ok" ? "banner ok" : "banner";
+    configBanner.innerHTML = '<div class="' + klass + '">' + escapeHtml(message) + '</div>';
+  }
+
+  if(HAS_BACKEND){
+    renderConfigBanner("info", "Conectando ao Google Sheets...");
+  } else {
+    renderConfigBanner(
+      "info",
+      "Modo local: tarefas manuais ficam salvas neste navegador. Para usar o Google Sheets e a IA, publique a pasta completa no Vercel."
+    );
+  }
+
+  function showError(msg){
+    errorBox.style.display = "flex";
+    errorBox.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>' + escapeHtml(msg) + '</span>';
+  }
+
+  function clearError(){
+    errorBox.style.display = "none";
+    errorBox.innerHTML = "";
+  }
+
+  // -------------------------------------------------------------------
+  // Helpers
+  // -------------------------------------------------------------------
+  function generateId(prefix){
+    const random = (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
+    return (prefix || "t") + "-" + random;
+  }
+
+  function shortCode(id){
+    return String(id || "").slice(-5).toUpperCase();
+  }
+
+  function escapeHtml(str){
+    return String(str ?? "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    }[c]));
+  }
+
+  function formatDate(iso){
+    if(!iso) return null;
+    const parts = String(iso).split("-");
+    if(parts.length !== 3) return null;
+    return parts[2] + "/" + parts[1];
+  }
+
+  function dateMs(value){
+    const ms = new Date(value || 0).getTime();
+    return Number.isFinite(ms) ? ms : 0;
+  }
+
+  function taskSort(a, b){
+    const ad = a.dueDate || "9999-12-31";
+    const bd = b.dueDate || "9999-12-31";
+    if(ad !== bd) return ad.localeCompare(bd);
+    return dateMs(b.createdAt) - dateMs(a.createdAt);
+  }
+
+  function normalizeTask(task){
+    const t = task || {};
+    return {
+      id: String(t.id || generateId("t")),
+      title: String(t.title || "Tarefa sem título").slice(0,120),
+      description: String(t.description || "").slice(0,2000),
+      priority: ["alta","media","baixa"].includes(t.priority) ? t.priority : "baixa",
+      status: t.status === "concluida" ? "concluida" : "pendente",
+      category: String(t.category || "geral").slice(0,60).toLowerCase(),
+      dueDate: /^\d{4}-\d{2}-\d{2}$/.test(String(t.dueDate || "")) ? String(t.dueDate) : "",
+      createdAt: t.createdAt || new Date().toISOString(),
+      updatedAt: t.updatedAt || t.createdAt || new Date().toISOString(),
+      source: t.source || "manual"
+    };
+  }
+
+  function saveLocalTasks(){
+    try {
+      localStorage.setItem(LOCAL_TASKS_KEY, JSON.stringify(tasks));
+    } catch(err){
+      console.warn("Não foi possível salvar no localStorage", err);
+    }
+  }
+
+  function loadLocalTasks(){
+    try {
+      const parsed = JSON.parse(localStorage.getItem(LOCAL_TASKS_KEY) || "[]");
+      return Array.isArray(parsed) ? parsed.map(normalizeTask) : [];
+    } catch(err){
+      return [];
+    }
+  }
+
+  function replaceTask(updated){
+    const normalized = normalizeTask(updated);
+    tasks = tasks.map(t => t.id === normalized.id ? normalized : t);
+  }
+
+  // -------------------------------------------------------------------
+  // Backend Apps Script
+  // -------------------------------------------------------------------
+  async function callBackend(payload, options){
+    if(!HAS_BACKEND) throw new Error("Backend não configurado.");
+
+    const opts = options || {};
+    const timeoutMs = opts.timeoutMs || (payload.action === "analyze" ? 120000 : 35000);
+
+    async function request(sitePassword){
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, sitePassword: sitePassword || "" }),
+          cache: "no-store",
+          credentials: "same-origin",
+          signal: controller.signal
+        });
+
+        let data;
+        try {
+          data = await response.json();
+        } catch(err){
+          throw new Error("O backend do Vercel não retornou JSON válido.");
+        }
+
+        // A Function usa 401 apenas para pedir a senha opcional do site.
+        if(!response.ok && !(response.status === 401 && data.code === "ACCESS_REQUIRED")){
+          throw new Error(data.error || ("Backend respondeu com status " + response.status + "."));
+        }
+        return data;
+      } catch(err){
+        if(err && err.name === "AbortError"){
+          throw new Error("A operação demorou além do limite. Tente novamente.");
+        }
+        throw err;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    let key = sessionStorage.getItem(ACCESS_SESSION_KEY) || "";
+    let data = await request(key);
+
+    if(!data.ok && data.code === "ACCESS_REQUIRED"){
+      sessionStorage.removeItem(ACCESS_SESSION_KEY);
+      key = window.prompt("Digite a senha de acesso da Central de Triagem:") || "";
+      if(!key) throw new Error("Acesso cancelado.");
+      sessionStorage.setItem(ACCESS_SESSION_KEY, key);
+      data = await request(key);
+    }
+
+    if(!data.ok){
+      throw new Error(data.error || "Erro desconhecido no backend.");
+    }
+
+    return data;
+  }
+
+  async function fetchAllTasks(){
+    const data = await callBackend({ action: "list" });
+    lastSyncAt = Date.now();
+    return Array.isArray(data.tasks) ? data.tasks.map(normalizeTask) : [];
+  }
+
+  // -------------------------------------------------------------------
+  // Ícones
+  // -------------------------------------------------------------------
+  const ICON = {
+    check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    undo: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>',
+    edit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+    calendar: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>'
+  };
+
+  // -------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------
+  function render(){
+    const pendentes = tasks.filter(t => t.status !== "concluida").length;
+    document.getElementById("subline").textContent = pendentes === 0
+      ? "Nenhuma tarefa pendente no momento."
+      : pendentes + (pendentes === 1 ? " tarefa pendente." : " tarefas pendentes.");
+
+    const board = document.getElementById("board");
+    const boardEmpty = document.getElementById("board-empty");
+
+    if(tasks.length === 0){
+      board.style.display = "none";
+      boardEmpty.style.display = "block";
+      return;
+    }
+
+    board.style.display = "grid";
+    boardEmpty.style.display = "none";
+
+    const buckets = { alta: [], media: [], baixa: [], concluida: [] };
+    tasks.forEach(t => {
+      if(t.status === "concluida") buckets.concluida.push(t);
+      else (buckets[t.priority] || buckets.baixa).push(t);
+    });
+
+    Object.keys(buckets).forEach(k => buckets[k].sort(taskSort));
+    board.innerHTML = COLUMN_ORDER.map(key => renderColumn(key, buckets[key])).join("");
+  }
+
+  function renderColumn(key, list){
+    const meta = COLUMN_META[key];
+    const cardsHtml = list.length === 0
+      ? '<div class="empty-col">' + meta.empty + '</div>'
+      : list.map(renderCard).join("");
+
+    return (
+      '<div>' +
+        '<div class="column-head">' +
+          '<span class="dot" style="background:' + meta.color + '"></span>' +
+          '<div style="min-width:0;">' +
+            '<div class="col-title display">' + meta.title + '</div>' +
+            '<div class="col-sub">' + meta.subtitle + '</div>' +
+          '</div>' +
+          '<span class="col-count mono">' + list.length + '</span>' +
+        '</div>' +
+        '<div class="cards">' + cardsHtml + '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderCard(task){
+    const isDone = task.status === "concluida";
+    const conf = PRIORITY[task.priority] || PRIORITY.baixa;
+    const stripeColor = isDone ? "#5C6773" : conf.color;
+    const dateLabel = formatDate(task.dueDate);
+
+    return (
+      '<div class="card" data-id="' + escapeHtml(task.id) + '">' +
+        '<div class="stripe" style="background:' + stripeColor + '"></div>' +
+        '<div class="card-body">' +
+          '<div class="card-top">' +
+            '<span class="pill">' + escapeHtml(task.category) + '</span>' +
+            '<span class="code mono">#' + shortCode(task.id) + '</span>' +
+          '</div>' +
+          '<p class="card-title' + (isDone ? " done" : "") + '">' + escapeHtml(task.title) + '</p>' +
+          (task.description ? '<p class="card-desc">' + escapeHtml(task.description) + '</p>' : '') +
+          '<div class="card-footer">' +
+            '<div class="meta-left">' +
+              (!isDone ? '<span class="dot" style="background:' + conf.color + '"></span><span>' + conf.label + '</span>' : '') +
+              (dateLabel ? '<span class="date-chip">' + ICON.calendar + ' ' + dateLabel + '</span>' : '') +
+            '</div>' +
+            '<div class="actions">' +
+              '<button class="icon-btn ' + (isDone ? "" : "complete") + '" data-action="toggle" title="' + (isDone ? "Reabrir tarefa" : "Marcar como concluída") + '" aria-label="' + (isDone ? "Reabrir tarefa" : "Marcar como concluída") + '">' + (isDone ? ICON.undo : ICON.check) + '</button>' +
+              '<button class="icon-btn" data-action="edit" title="Editar tarefa" aria-label="Editar tarefa">' + ICON.edit + '</button>' +
+              '<button class="icon-btn danger" data-action="delete" title="Excluir tarefa" aria-label="Excluir tarefa">' + ICON.trash + '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  // -------------------------------------------------------------------
+  // CRUD
+  // -------------------------------------------------------------------
+  async function toggleTask(id){
+    if(isBusy) return;
+    clearError();
+    const task = tasks.find(t => t.id === id);
+    if(!task) return;
+
+    isBusy = true;
+    try {
+      if(HAS_BACKEND){
+        const result = await callBackend({ action: "toggle", id });
+        replaceTask(result.task);
+      } else {
+        task.status = task.status === "concluida" ? "pendente" : "concluida";
+        task.updatedAt = new Date().toISOString();
+        saveLocalTasks();
+      }
+      render();
+    } catch(err){
+      showError("Não consegui atualizar a tarefa: " + err.message);
+    } finally {
+      isBusy = false;
+    }
+  }
+
+  async function deleteTask(id){
+    if(isBusy) return;
+    const task = tasks.find(t => t.id === id);
+    if(!task) return;
+    if(!window.confirm('Excluir a tarefa "' + task.title + '"?')) return;
+
+    clearError();
+    isBusy = true;
+    try {
+      if(HAS_BACKEND) await callBackend({ action: "delete", id });
+      tasks = tasks.filter(t => t.id !== id);
+      if(!HAS_BACKEND) saveLocalTasks();
+      render();
+    } catch(err){
+      showError("Não consegui excluir a tarefa: " + err.message);
+    } finally {
+      isBusy = false;
+    }
+  }
+
+  // -------------------------------------------------------------------
+  // Modal criar/editar
+  // -------------------------------------------------------------------
+  const modalBackdrop = document.getElementById("modal-backdrop");
+  const modalTitle = document.getElementById("modal-title");
+  const taskForm = document.getElementById("task-form");
+  const fTitle = document.getElementById("f-title");
+  const fDesc = document.getElementById("f-desc");
+  const fPriority = document.getElementById("f-priority");
+  const fDue = document.getElementById("f-due");
+  const fCategory = document.getElementById("f-category");
+  const fStatus = document.getElementById("f-status");
+
+  function openModal(task){
+    editingTaskId = task ? task.id : null;
+    modalTitle.textContent = task ? "Editar tarefa" : "Nova tarefa";
+    fTitle.value = task ? task.title : "";
+    fDesc.value = task ? task.description : "";
+    fPriority.value = task ? task.priority : "media";
+    fDue.value = task ? (task.dueDate || "") : "";
+    fCategory.value = task ? task.category : "";
+    fStatus.value = task ? task.status : "pendente";
+    modalBackdrop.classList.add("open");
+    setTimeout(() => fTitle.focus(), 0);
+  }
+
+  function closeModal(){
+    modalBackdrop.classList.remove("open");
+    editingTaskId = null;
+    taskForm.reset();
+  }
+
+  document.getElementById("new-task-btn").addEventListener("click", () => openModal(null));
+  document.getElementById("modal-close").addEventListener("click", closeModal);
+  document.getElementById("modal-cancel").addEventListener("click", closeModal);
+  modalBackdrop.addEventListener("click", e => { if(e.target === modalBackdrop) closeModal(); });
+  document.addEventListener("keydown", e => { if(e.key === "Escape" && modalBackdrop.classList.contains("open")) closeModal(); });
+
+  taskForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    if(isBusy) return;
+
+    const title = fTitle.value.trim();
+    if(!title) return;
+
+    const formData = {
+      title,
+      description: fDesc.value.trim(),
+      priority: fPriority.value,
+      dueDate: fDue.value,
+      category: (fCategory.value.trim() || "geral").toLowerCase(),
+      status: fStatus.value
+    };
+
+    const submitBtn = taskForm.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    isBusy = true;
+    clearError();
+
+    try {
+      if(editingTaskId){
+        if(HAS_BACKEND){
+          const result = await callBackend({ action: "update", id: editingTaskId, task: formData });
+          replaceTask(result.task);
+        } else {
+          const index = tasks.findIndex(t => t.id === editingTaskId);
+          if(index >= 0){
+            tasks[index] = normalizeTask({ ...tasks[index], ...formData, updatedAt: new Date().toISOString() });
+            saveLocalTasks();
+          }
+        }
+      } else {
+        if(HAS_BACKEND){
+          const result = await callBackend({ action: "create", task: formData });
+          tasks.unshift(normalizeTask(result.task));
+        } else {
+          tasks.unshift(normalizeTask({
+            ...formData,
+            id: generateId("t"),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            source: "manual"
+          }));
+          saveLocalTasks();
+        }
+      }
+
+      closeModal();
+      render();
+    } catch(err){
+      showError("Não consegui salvar a tarefa: " + err.message);
+    } finally {
+      submitBtn.disabled = false;
+      isBusy = false;
+    }
+  });
+
+  document.getElementById("board").addEventListener("click", e => {
+    const btn = e.target.closest("button[data-action]");
+    if(!btn) return;
+    const card = e.target.closest(".card");
+    if(!card) return;
+    const id = card.dataset.id;
+    const action = btn.dataset.action;
+    if(action === "toggle") toggleTask(id);
+    else if(action === "delete") deleteTask(id);
+    else if(action === "edit") openModal(tasks.find(t => t.id === id));
+  });
+
+  // -------------------------------------------------------------------
+  // IA
+  // -------------------------------------------------------------------
+  function setProcessing(state){
+    isProcessing = state;
+    analyzeBtn.disabled = state || !rawInput.value.trim();
+    analyzeLabel.textContent = state ? "Analisando..." : "Analisar e organizar";
+    analyzeIcon.classList.toggle("spin", state);
+    rawInput.disabled = state;
+  }
+
+  rawInput.value = localStorage.getItem(DRAFT_KEY) || "";
+  analyzeBtn.disabled = !rawInput.value.trim();
+
+  rawInput.addEventListener("input", () => {
+    analyzeBtn.disabled = isProcessing || !rawInput.value.trim();
+    try { localStorage.setItem(DRAFT_KEY, rawInput.value); } catch(err) {}
+  });
+
+  rawInput.addEventListener("keydown", e => {
+    if((e.ctrlKey || e.metaKey) && e.key === "Enter"){
+      e.preventDefault();
+      analyzeBtn.click();
+    }
+  });
+
+  analyzeBtn.addEventListener("click", async () => {
+    const text = rawInput.value.trim();
+    if(!text || isProcessing) return;
+    clearError();
+
+    if(!HAS_BACKEND){
+      showError("A análise por IA fica disponível quando a pasta do projeto é publicada no Vercel com o backend configurado.");
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      const result = await callBackend({
+        action: "analyze",
+        text,
+        requestId: generateId("in")
+      }, { timeoutMs: 120000 });
+
+      const newTasks = Array.isArray(result.tasks) ? result.tasks.map(normalizeTask) : [];
+      if(newTasks.length === 0){
+        showError("Não encontrei tarefas concretas nesse texto. Tente descrever as ações com mais detalhes.");
+      } else {
+        tasks = newTasks.concat(tasks);
+        rawInput.value = "";
+        localStorage.removeItem(DRAFT_KEY);
+        render();
+      }
+    } catch(err){
+      showError(err.message || "Não foi possível analisar o texto agora.");
+    } finally {
+      setProcessing(false);
+    }
+  });
+
+  // -------------------------------------------------------------------
+  // Sincronização e inicialização
+  // -------------------------------------------------------------------
+  async function syncFromServer(silent){
+    if(!HAS_BACKEND) return;
+    try {
+      tasks = await fetchAllTasks();
+      render();
+      if(!silent){
+        renderConfigBanner("ok", "Google Sheets conectado. Seus dados estão sendo salvos no backend.");
+        setTimeout(() => renderConfigBanner("", ""), 2600);
+      }
+    } catch(err){
+      render();
+      renderConfigBanner("info", "Não foi possível conectar ao backend. Verifique a implantação do Apps Script.");
+      showError("Não consegui carregar as tarefas do servidor: " + err.message);
+    }
+  }
+
+  async function init(){
+    if(HAS_BACKEND){
+      document.getElementById("subline").textContent = "Carregando tarefas...";
+      await syncFromServer(false);
+    } else {
+      tasks = loadLocalTasks();
+      render();
+    }
+  }
+
+  document.addEventListener("visibilitychange", async () => {
+    if(document.visibilityState === "visible" && HAS_BACKEND && Date.now() - lastSyncAt > 60000 && !isBusy && !isProcessing){
+      await syncFromServer(true);
+    }
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>
