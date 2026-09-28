@@ -7,15 +7,15 @@
  * O texto bruto enviado para a IA não é persistido na planilha.
  *
  * Script Properties suportadas:
- *  - ANTHROPIC_API_KEY  (obrigatória para análise por IA)
+ *  - GEMINI_API_KEY      (obrigatória para análise por IA)
  *  - APP_ACCESS_KEY     (recomendada; protege o backend publicado como "Anyone")
- *  - AI_MODEL           (opcional; padrão: claude-sonnet-4-6)
+ *  - AI_MODEL           (opcional; padrão: gemini-3.5-flash-lite)
  *  - SPREADSHEET_ID     (opcional se o script estiver vinculado à própria planilha)
  */
 
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '3.0.0';
 const TASKS_SHEET = 'Tarefas';
-const DEFAULT_AI_MODEL = 'claude-sonnet-4-6';
+const DEFAULT_AI_MODEL = 'gemini-3.5-flash-lite';
 const MAX_INPUT_CHARS = 12000;
 const MAX_TASKS_PER_ANALYSIS = 30;
 
@@ -91,7 +91,7 @@ function setupProject() {
     ok: true,
     spreadsheet: getSpreadsheet_().getName(),
     tasksSheet: TASKS_SHEET,
-    hasAnthropicKey: Boolean(props.getProperty('ANTHROPIC_API_KEY')),
+    hasGeminiKey: Boolean(props.getProperty('GEMINI_API_KEY')),
     hasAccessKey: Boolean(props.getProperty('APP_ACCESS_KEY')),
     aiModel: props.getProperty('AI_MODEL') || DEFAULT_AI_MODEL,
     timezone: Session.getScriptTimeZone(),
@@ -354,18 +354,18 @@ function analyzeAndStore_(payload) {
   }
 
   const props = PropertiesService.getScriptProperties();
-  const apiKey = props.getProperty('ANTHROPIC_API_KEY');
+  const apiKey = props.getProperty('GEMINI_API_KEY');
   if (!apiKey) {
     throw appError_(
       'AI_NOT_CONFIGURED',
-      'A chave ANTHROPIC_API_KEY não foi configurada nas propriedades do Apps Script.'
+      'A chave GEMINI_API_KEY não foi configurada nas propriedades do Apps Script.'
     );
   }
 
   const model = props.getProperty('AI_MODEL') || DEFAULT_AI_MODEL;
   const createdAt = nowIso_();
   const prompt = buildTriagePrompt_(text);
-  const rawModelText = callAnthropic_(apiKey, model, prompt);
+  const rawModelText = callGemini_(apiKey, model, prompt);
   const aiTasks = parseAiTasks_(rawModelText);
   const stored = storeAiTasks_(aiTasks, createdAt);
 
@@ -400,23 +400,30 @@ function storeAiTasks_(items, createdAt) {
   }
 }
 
-function callAnthropic_(apiKey, model, prompt) {
-  const response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+function callGemini_(apiKey, model, prompt) {
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
+    encodeURIComponent(model) + ':generateContent';
+
+  const response = UrlFetchApp.fetch(url, {
     method: 'post',
     contentType: 'application/json',
     headers: {
-      Authorization: 'Bearer ' + apiKey,
-      'anthropic-version': '2023-06-01'
+      'x-goog-api-key': apiKey
     },
     payload: JSON.stringify({
-      model: model,
-      max_tokens: 2500,
-      messages: [
+      contents: [
         {
           role: 'user',
-          content: prompt
+          parts: [
+            { text: prompt }
+          ]
         }
-      ]
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 2500,
+        responseMimeType: 'application/json'
+      }
     }),
     muteHttpExceptions: true
   });
@@ -428,25 +435,40 @@ function callAnthropic_(apiKey, model, prompt) {
   try {
     data = JSON.parse(body);
   } catch (err) {
-    throw appError_('AI_INVALID_RESPONSE', 'A API da IA retornou uma resposta que não é JSON.');
+    throw appError_(
+      'AI_INVALID_RESPONSE',
+      'A API Gemini retornou uma resposta que não é JSON. HTTP ' + status + '.'
+    );
   }
 
   if (status < 200 || status >= 300) {
     const apiMessage = data && data.error && data.error.message
       ? String(data.error.message)
       : 'status ' + status;
-    throw appError_('AI_API_ERROR', 'Falha na API da IA: ' + apiMessage.slice(0, 300));
+    throw appError_(
+      'AI_API_ERROR',
+      'Falha na API Gemini: ' + apiMessage.slice(0, 350)
+    );
   }
 
-  const blocks = Array.isArray(data.content) ? data.content : [];
-  const text = blocks
-    .filter(block => block && block.type === 'text' && typeof block.text === 'string')
-    .map(block => block.text)
+  const candidates = Array.isArray(data.candidates) ? data.candidates : [];
+  const parts = candidates[0] &&
+    candidates[0].content &&
+    Array.isArray(candidates[0].content.parts)
+      ? candidates[0].content.parts
+      : [];
+
+  const text = parts
+    .filter(part => part && typeof part.text === 'string')
+    .map(part => part.text)
     .join('\n')
     .trim();
 
   if (!text) {
-    throw appError_('AI_EMPTY_RESPONSE', 'A IA não retornou texto para analisar.');
+    throw appError_(
+      'AI_EMPTY_RESPONSE',
+      'A API Gemini não retornou texto para analisar.'
+    );
   }
 
   return text;
@@ -475,7 +497,7 @@ function buildTriagePrompt_(rawText) {
     '9. Prazo: retorne dueDate em YYYY-MM-DD. Resolva expressões relativas como hoje, amanhã e próxima sexta usando a data informada. Se não houver prazo inferível com segurança, use string vazia.',
     '10. A descrição deve guardar detalhes úteis que não couberem no título, sem inventar informações.',
     '',
-    'Responda SOMENTE com um array JSON válido dentro de <json></json>. Não use markdown e não escreva análise fora desse bloco.',
+    'Responda SOMENTE com um array JSON válido. Não use markdown e não escreva análise fora desse array.',
     'Formato de cada objeto:',
     '{"title":"...","description":"...","priority":"alta|media|baixa","status":"pendente|concluida","category":"...","dueDate":"YYYY-MM-DD ou vazio"}',
     '',
